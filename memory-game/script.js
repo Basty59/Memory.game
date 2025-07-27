@@ -3,109 +3,76 @@ const scoreEl = document.getElementById('score');
 const timerEl = document.getElementById('timer');
 const restartBtn = document.getElementById('restart');
 
-// Sounds
-const flipSound = new Audio('sounds/flip.mp3');
-const matchSound = new Audio('sounds/match.mp3');
-
-const imagePaths = [
-  'images/img1.jpg',
-  'images/img2.jpg',
-  'images/img3.jpg',
-  'images/img4.jpg',
-  'images/img5.jpg',
-  'images/img6.jpg',
-  'images/img7.jpg',
-  'images/img8.jpg'
-];
-
-let flippedCards = [];
-let matched = [];
 let score = 0;
-let time = 0;
-let timer = null;
-let gameStarted = false;
+let timer = 0;
+let interval;
+let flipped = [];
+let matched = 0;
 
-function startTimer() {
-  if (!gameStarted) {
-    gameStarted = true;
-    timer = setInterval(() => {
-      time++;
-      timerEl.textContent = `Time: ${time}s`;
-    }, 1000);
+const emojis = ['🍌', '🍍', '🌴', '🐒', '🐍', '🦜', '🍉', '🦁'];
+let cards = [...emojis, ...emojis];
+
+function shuffle(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    let j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
   }
+  return array;
 }
 
-function resetGame() {
+function startGame() {
   board.innerHTML = '';
-  flippedCards = [];
-  matched = [];
+  cards = shuffle(cards);
   score = 0;
-  time = 0;
-  gameStarted = false;
-  clearInterval(timer);
-  timerEl.textContent = 'Time: 0s';
-  scoreEl.textContent = 'Score: 0';
+  timer = 0;
+  matched = 0;
+  flipped = [];
+  scoreEl.textContent = `Score: ${score}`;
+  timerEl.textContent = `Time: ${timer}s`;
 
-  let cards = [...imagePaths, ...imagePaths].sort(() => 0.5 - Math.random());
+  clearInterval(interval);
+  interval = setInterval(() => {
+    timer++;
+    timerEl.textContent = `Time: ${timer}s`;
+  }, 1000);
 
-  cards.forEach((imgSrc) => {
+  cards.forEach(emoji => {
     const card = document.createElement('div');
-    card.classList.add('card');
-    card.dataset.image = imgSrc;
-
-    const cardInner = document.createElement('div');
-    cardInner.classList.add('card-inner');
-
-    const front = document.createElement('div');
-    front.classList.add('front');
-
-    const back = document.createElement('div');
-    back.classList.add('back');
-    back.style.backgroundImage = `url('${imgSrc}')`;
-
-    cardInner.appendChild(front);
-    cardInner.appendChild(back);
-    card.appendChild(cardInner);
+    card.className = 'card';
+    card.dataset.emoji = emoji;
+    card.textContent = '❓';
+    card.addEventListener('click', () => flipCard(card));
     board.appendChild(card);
-
-    card.addEventListener('click', () => {
-      if (
-        flippedCards.length < 2 &&
-        !flippedCards.includes(card) &&
-        !matched.includes(card)
-      ) {
-        flipSound.play();
-        startTimer();
-        card.classList.add('flipped');
-        flippedCards.push(card);
-
-        if (flippedCards.length === 2) {
-          const [first, second] = flippedCards;
-          if (first.dataset.image === second.dataset.image) {
-            matched.push(first, second);
-            flippedCards = [];
-            score++;
-            scoreEl.textContent = `Score: ${score}`;
-            matchSound.play();
-            if (matched.length === 16) {
-              clearInterval(timer);
-              setTimeout(() => alert(`🎉 You win! Time: ${time}s, Score: ${score}`), 500);
-            }
-          } else {
-            setTimeout(() => {
-              first.classList.remove('flipped');
-              second.classList.remove('flipped');
-              flippedCards = [];
-            }, 1000);
-          }
-        }
-      }
-    });
   });
 }
 
-// Start game
-resetGame();
-restartBtn.addEventListener('click', resetGame);
+function flipCard(card) {
+  if (flipped.length === 2 || card.classList.contains('matched') || flipped.includes(card)) return;
+
+  card.textContent = card.dataset.emoji;
+  flipped.push(card);
+
+  if (flipped.length === 2) {
+    if (flipped[0].dataset.emoji === flipped[1].dataset.emoji) {
+      flipped.forEach(c => {
+        c.classList.add('matched');
+      });
+      matched += 2;
+      score++;
+      scoreEl.textContent = `Score: ${score}`;
+      if (matched === cards.length) clearInterval(interval);
+    } else {
+      setTimeout(() => {
+        flipped.forEach(c => c.textContent = '❓');
+      }, 800);
+    }
+    flipped = [];
+  }
+}
+
+restartBtn.addEventListener('click', startGame);
+window.onload = startGame;
+
+
 
 
